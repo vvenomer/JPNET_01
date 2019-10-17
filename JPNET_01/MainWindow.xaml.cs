@@ -1,10 +1,14 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Windows.Input;
 using System.Xml;
+using System.Xml.Linq;
 
 namespace JPNET_01
 {
@@ -13,16 +17,31 @@ namespace JPNET_01
     /// </summary>
     public partial class MainWindow : Window
     {
-        XmlDocument doc;
+
+        class ComboBoxData
+        {
+            public ComboBoxData(string name, string population)
+            {
+                DisplayName = name + " (" + population + ")";
+                Name = name;
+            }
+            public string DisplayName { get; private set; }
+            public string Name { get; private set; }
+
+            public override string ToString()
+            {
+                return DisplayName;
+            }
+        }
+
+        XDocument doc;
         public MainWindow()
         {
-            doc = new XmlDocument();
-            doc.Load("mondial-3.0.xml");
+            doc = XDocument.Load("mondial-3.0.xml");
 
             InitializeComponent();
 
             countryPopulation.Content = GetPopulation(countryName.Text);
-            countryList.ItemsSource = GetCountriesNames();
         }
 
         private void TextBox_KeyUp(object sender, KeyEventArgs e)
@@ -35,20 +54,27 @@ namespace JPNET_01
         }
         private void SelectedCountryInComboBox(object sender, SelectionChangedEventArgs e)
         {
-            var countryName = ((ComboBox)sender).SelectedItem.ToString();
-            var country = GetCountry(countryName);
-            var code = country.Attributes["datacode"].Value;
-            var population = country.Attributes["population"].Value;
-            var totalArea = country.Attributes["total_area"].Value;
-            countryInfo.Document.Blocks.Clear();
-            countryInfo.Document.Blocks.Add(new Paragraph(new Run("Kod: " + code)));
-            countryInfo.Document.Blocks.Add(new Paragraph(new Run("Populacja: " + population)));
-            countryInfo.Document.Blocks.Add(new Paragraph(new Run("Powierzchnia: " + totalArea)));
+            var countryName = ((ComboBox)sender).SelectedItem as ComboBoxData;
+            var country = GetCountry(countryName.Name);
+            var code = country.Attribute("datacode").Value;
+            var population = country.Attribute("population").Value;
+            var totalArea = country.Attribute("total_area").Value;
 
-            country.GetElementsByName("province").ToList().ForEach(c =>
+            countryInfo.Document.Blocks.Clear();
+            AddTextToRichTextBox(countryInfo, "Kod: " + code);
+            AddTextToRichTextBox(countryInfo, "Populacja: " + population);
+            AddTextToRichTextBox(countryInfo, "Powierzchnia: " + totalArea);
+
+            foreach (var city in country.Descendants("city"))
             {
-                countryInfo.Document.Blocks.Add(new Paragraph(new Run("Miasto: " + c.GetElementsByName("name").First().Value)));
-            });
+                AddTextToRichTextBox(countryInfo, "Miasto: " + city.Element("name").Value.Trim());
+            }
+        }
+
+
+        void AddTextToRichTextBox(RichTextBox textBox, string text)
+        {
+            textBox.Document.Blocks.Add(new Paragraph(new Run(text)));
         }
 
         string GetPopulation(string text)
@@ -56,23 +82,37 @@ namespace JPNET_01
             var node = GetCountry(text);
             if (node == null)
                 return "Country not found";
-            return int.Parse(node.Attributes["population"].Value).ToString("0,0");
+            return int.Parse(node.Attribute("population").Value).ToString("0,0");
         }
 
-        IEnumerable<XmlNode> GetCountries()
+        XElement GetCountry(string name)
         {
-            return doc.GetElementsByTagName("country").ToEnumerable();
+            return doc.Descendants("country").FirstOrDefault(c => c.Attribute("name").Value == name);
         }
 
-        XmlNode GetCountry(string name)
+        private async void ComboBoxLoaded(object sender, RoutedEventArgs e)
         {
-            return GetCountries().GetByAttribute("name", name);
+            countryList.ItemsSource = await Task.WhenAll(doc.Find(100000).Select(async c =>
+                await Task.Run(() =>
+                {
+                    Thread.Sleep(100);
+                    return new ComboBoxData(c.Attribute("name").Value, c.Attribute("population").Value);
+                })
+            ));
         }
 
-        IEnumerable<string> GetCountriesNames()
+        private void Button_Click(object sender, RoutedEventArgs e)
         {
-            return GetCountries().Select(c => c.Attributes["name"].Value);
-        }
+            var maxLine = 20;
+            var wholeTxt = doc.ToString();
+            var blockList = new List<TextBlock>();
+            for(int i = 0; i < wholeTxt.Length; i += maxLine)
+            {
+                var block = new TextBlock(new Run(wholeTxt.Substring(i, Math.Min(maxLine, wholeTxt.Length - i))));
 
+            }
+            countryInfo.Document.Blocks.Clear();
+            AddTextToRichTextBox(countryInfo, wholeTxt);
+        }
     }
 }

@@ -9,8 +9,9 @@
     <Grid>
         <TextBox Name="countryName" HorizontalAlignment="Left" Height="24" Margin="574,10,0,0" TextWrapping="Wrap" Text="Cape Verde" VerticalAlignment="Top" Width="209" KeyUp="TextBox_KeyUp"/>
         <Label Name="countryPopulation" Content="Label" HorizontalAlignment="Left" Margin="574,39,0,0" VerticalAlignment="Top" Width="209"/>
-        <ComboBox Name="countryList" HorizontalAlignment="Left" Margin="10,10,0,0" VerticalAlignment="Top" Width="120" SelectionChanged="SelectedCountryInComboBox"/>
-        <RichTextBox Name="countryInfo" HorizontalAlignment="Left" Height="100" Margin="10,37,0,0" VerticalAlignment="Top" Width="120"/>
+        <ComboBox Name="countryList" HorizontalAlignment="Left" Margin="10,10,0,0" VerticalAlignment="Top" Width="120" SelectionChanged="SelectedCountryInComboBox" Loaded="ComboBoxLoaded"/>
+        <RichTextBox Name="countryInfo" HorizontalAlignment="Left" Height="372" Margin="10,37,0,0" VerticalAlignment="Top" Width="559"/>
+        <Button Content="Load All Data" HorizontalAlignment="Left" Margin="135,10,0,0" VerticalAlignment="Top" Width="90" Height="22" Click="Button_Click"/>
 
 
     </Grid>
